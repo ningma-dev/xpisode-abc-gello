@@ -1,0 +1,9 @@
+xpisode-abc-gello
+
+The GELLO leader logic (encoder mapping, start-up calibration, gripper mapping, soft-limit and
+trigger force feedback, the Dynamixel access) is ported from amazon-far/abc, commit d0832d1,
+deploy/robot/leaders/{gello_leader,leader_robot,dynamixel}.py, licensed under the Apache License,
+Version 2.0. Changes: split into pure functions (mapping.py) and a bus (bus.py); one sync read
+of current, velocity and position and one sync write of all currents per cycle; the trigger
+reported as xpisode's 0 released .. 1 squeezed; a client-set feedback torque added to the
+trigger spring; wrapped as an xpisode Device (device.py).

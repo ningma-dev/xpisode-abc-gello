@@ -1,0 +1,38 @@
+[project]
+name = "xpisode-abc-gello"
+version = "0.1.0"
+description = "abc's GELLO leader arm (seven XL330s on a U2D2) as an xpisode device."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+dependencies = [
+  "dynamixel-sdk>=3.7",
+  "numpy>=1.24",
+  "xpisode-device[iox]>=0.1.0,<0.2",
+  "xpisode-env>=0.1.0,<0.2",
+  "xpisode-format>=0.1.0,<0.2",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.3"]
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/xpisode_abc_gello"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = ["error"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+# The framework commit xpisode-site pins; a station's pins take precedence over these.
+[tool.uv.sources]
+xpisode-device = { git = "ssh://git@github.com/ningma-dev/xpisode.git", rev = "01d6d596408702c1feea81860ca3432d3263adc2", subdirectory = "packages/xpisode-device" }
+xpisode-format = { git = "ssh://git@github.com/ningma-dev/xpisode.git", rev = "01d6d596408702c1feea81860ca3432d3263adc2", subdirectory = "packages/xpisode-format" }
+xpisode-env = { git = "ssh://git@github.com/ningma-dev/xpisode.git", rev = "01d6d596408702c1feea81860ca3432d3263adc2", subdirectory = "packages/xpisode-env" }
