@@ -194,3 +194,31 @@ def test_a_calibration_of_another_gello_is_refused(calibration_file: Path) -> No
         device.GelloLeader(other, IDS, str(calibration_file))
     with pytest.raises(ValueError, match="servo IDs"):
         device.GelloLeader(PORT, (20, 21, 22, 23, 24, 25, 26), str(calibration_file))
+
+
+def test_a_motor_not_answering_at_open_is_the_error_reported(
+    calibration_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    closed: list[bool] = []
+
+    class Silent(FakeBus):
+        def ping_all(self) -> dict[int, int]:
+            raise ConnectionError("XL330 13: ping: no status packet")
+
+        def torque_off(self) -> None:
+            raise ConnectionError("XL330 13: torque off: no status packet")
+
+        def closePort(self) -> None:
+            closed.append(True)
+
+        def close(self) -> None:
+            try:
+                self.torque_off()
+            finally:
+                self.closePort()
+
+    monkeypatch.setattr(device, "Bus", Silent)
+    gello = device.GelloLeader(PORT, IDS, str(calibration_file))
+    with pytest.raises(ConnectionError, match="ping"):
+        gello.open(MonotonicClock())
+    assert closed

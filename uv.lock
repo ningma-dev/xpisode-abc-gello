@@ -1028,7 +1028,7 @@ wheels = [
 
 [[package]]
 name = "xpisode-abc-gello"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "dynamixel-sdk" },

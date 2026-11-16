@@ -18,6 +18,7 @@ and the trigger's ends; it must be this GELLO's (its U2D2 serial and servo IDs).
 
 from __future__ import annotations
 
+import json
 import threading
 import time
 from collections.abc import Sequence
@@ -140,7 +141,10 @@ class GelloLeader(Device):
             self._offsets = mapping.offsets(self.calibration, raw)
             pose = mapping.joint_angles(raw, self._offsets, self.signs)
         except BaseException:
-            bus.port.closePort()
+            try:
+                bus.close()  # torque off, even after current mode was entered
+            except (ConnectionError, OSError):
+                bus.port.closePort()  # a motor that does not answer: the first error stands
             self._bus = None
             raise
         self._facts = {
@@ -153,9 +157,8 @@ class GelloLeader(Device):
             "baudrate": self.baudrate,
             "rate_hz": self.rate_hz,
             "calibration": str(self.calibration_path),
-            "calibrated_at": self.calibration.at,
-            "joint_signs": [int(s) for s in self.signs],
-            "trigger_gain": round(self.gain, 6),
+            # what the joints were read with, so a later calibration does not hide it
+            "calibration_values": json.loads(self.calibration.to_json()),
             "opening_pose_deg": [round(float(np.rad2deg(a)), 1) for a in pose],
             "force_feedback": self.force_feedback,
             "max_feedback_torque": self.max_feedback_torque,

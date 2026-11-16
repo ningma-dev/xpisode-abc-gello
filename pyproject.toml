@@ -1,6 +1,6 @@
 [project]
 name = "xpisode-abc-gello"
-version = "0.1.0"
+version = "0.2.0"
 description = "abc's GELLO leader arm (seven XL330s on a U2D2) as an xpisode device."
 readme = "README.md"
 license = "Apache-2.0"
