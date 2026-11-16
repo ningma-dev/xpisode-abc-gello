@@ -9,7 +9,11 @@ joint_position endpoint and a teleop client gives it no ``mirror``.
 
     xpisode-device run --station lab --name leader_l --factory xpisode_abc_gello:GelloLeader \\
         --config '{"device": "/dev/serial/by-id/usb-FTDI_..._FTBPFNFF-if00-port0",
-                   "servo_ids": [10, 11, 12, 13, 14, 15, 16]}'
+                   "servo_ids": [10, 11, 12, 13, 14, 15, 16],
+                   "calibration": "tuned/gello_leader_l.json"}'
+
+The calibration (``python -m xpisode_abc_gello.calibrate``) gives each joint's zero and direction
+and the trigger's ends; it must be this GELLO's (its U2D2 serial and servo IDs). Any pose opens.
 """
 
 from __future__ import annotations
@@ -39,8 +43,6 @@ from xpisode_abc_gello import mapping
 from xpisode_abc_gello.bus import Bus, latency_timer
 
 ABC_SOURCE = "amazon-far/abc d0832d1 deploy/robot/leaders"
-DEFAULT_SIGNS = (1, -1, -1, -1, 1, 1, 1)
-"""abc's default profile."""
 FAILURES_TO_FAULT = 5
 """Consecutive failed cycles before the device faults; one alone is retried."""
 OPENING_SLOPE = (mapping.FOLLOWER_GRIPPER_RANGE[1] - mapping.FOLLOWER_GRIPPER_RANGE[0]) / (
@@ -68,8 +70,8 @@ class GelloLeader(Device):
         self,
         device: str,
         servo_ids: Sequence[int],
+        calibration: str,
         *,
-        joint_signs: Sequence[int] = DEFAULT_SIGNS,
         baudrate: int = 2_000_000,
         rate_hz: float = 400.0,
         poll_hz: float = 200.0,
@@ -77,15 +79,22 @@ class GelloLeader(Device):
         max_feedback_torque: float = 0.15,
         feedback_timeout_s: float = 0.1,
         feedback_slew: float = 5.0,
-        calibration_tolerance_deg: float = 15.0,
     ) -> None:
-        if len(servo_ids) != mapping.MOTORS or len(joint_signs) != mapping.MOTORS:
-            raise ValueError(f"servo_ids and joint_signs need {mapping.MOTORS} entries each")
-        if sorted(abs(int(s)) for s in joint_signs) != [1] * mapping.MOTORS:
-            raise ValueError("joint_signs are 1 or -1")
+        if len(servo_ids) != mapping.MOTORS:
+            raise ValueError(f"servo_ids needs {mapping.MOTORS} entries")
         self.device = device
         self.ids = tuple(int(i) for i in servo_ids)
-        self.signs = np.asarray(joint_signs, dtype=np.float64)
+        self.calibration_path = Path(calibration)
+        self.calibration = cal = mapping.Calibration.load(self.calibration_path)
+        if cal.servo_ids != self.ids:
+            raise ValueError(
+                f"{calibration} is for servo IDs {list(cal.servo_ids)}, not {list(self.ids)}"
+            )
+        serial = _ftdi_serial(device)
+        if cal.serial is not None and serial is not None and cal.serial != serial:
+            raise ValueError(f"{calibration} is the GELLO on U2D2 {cal.serial}, not {serial}")
+        self.signs = cal.sign_array
+        self.gain = cal.trigger_gain
         self.baudrate = baudrate
         self.rate_hz = rate_hz
         self.poll_hz = poll_hz
@@ -93,10 +102,9 @@ class GelloLeader(Device):
         self.max_feedback_torque = max_feedback_torque
         self.feedback_timeout_s = feedback_timeout_s
         self.feedback_slew = feedback_slew
-        self.calibration_tolerance = np.deg2rad(calibration_tolerance_deg)
         self._clock: Clock | None = None
         self._bus: Bus | None = None
-        self._offsets = np.zeros(mapping.MOTORS)
+        self._offsets = mapping.Offsets(np.zeros(mapping.DOF), 0.0)
         self._facts: dict[str, JsonValue] = {}
         self._lock = threading.Lock()
         self._cycle: _Cycle | None = None
@@ -123,24 +131,14 @@ class GelloLeader(Device):
         try:
             models = bus.ping_all()
             bus.torque_off()
+            if self.force_feedback:
+                bus.enter_current_mode()
+            # The turns are taken after any mode change, from what the cycles will read.
             for _ in range(10):
                 present = bus.read()
             raw = mapping.raw_angle(present.counts)
-            self._offsets = mapping.calibrate(raw, self.signs)
+            self._offsets = mapping.offsets(self.calibration, raw)
             pose = mapping.joint_angles(raw, self._offsets, self.signs)
-            residual = np.abs(pose - mapping.CALIBRATION_POSITION)
-            if np.any(residual > self.calibration_tolerance):
-                far = {
-                    f"M{i}": round(float(np.rad2deg(r)), 1)
-                    for i, r in enumerate(residual)
-                    if r > self.calibration_tolerance
-                }
-                raise RuntimeError(
-                    "put the GELLO in its calibration pose (arm joints at the YAM's zero, trigger "
-                    f"released) before opening it; degrees away: {far}"
-                )
-            if self.force_feedback:
-                bus.enter_current_mode()
         except BaseException:
             bus.port.closePort()
             self._bus = None
@@ -154,9 +152,11 @@ class GelloLeader(Device):
             "models": [models[i] for i in self.ids],
             "baudrate": self.baudrate,
             "rate_hz": self.rate_hz,
+            "calibration": str(self.calibration_path),
+            "calibrated_at": self.calibration.at,
             "joint_signs": [int(s) for s in self.signs],
-            "offset_steps": [round(o / mapping.CALIBRATION_STEP) for o in self._offsets],
-            "calibration_residual_deg": [round(float(np.rad2deg(r)), 2) for r in residual],
+            "trigger_gain": round(self.gain, 6),
+            "opening_pose_deg": [round(float(np.rad2deg(a)), 1) for a in pose],
             "force_feedback": self.force_feedback,
             "max_feedback_torque": self.max_feedback_torque,
             "ported_from": ABC_SOURCE,
@@ -293,17 +293,20 @@ class GelloLeader(Device):
         assert self._bus is not None and self._clock is not None
         present = self._bus.read()
         time_ns = self._clock.now_ns()
-        angles = mapping.joint_angles(mapping.raw_angle(present.counts), self._offsets, self.signs)
-        joints, trigger_angle = angles[: mapping.DOF], float(angles[-1])
+        raw = mapping.raw_angle(present.counts)
+        joints = mapping.joint_angles(raw, self._offsets, self.signs)
+        trigger_angle = mapping.trigger_angle(raw, self._offsets, self.gain)
         trigger_torque = feedback = 0.0
         if self.force_feedback:
             feedback = self._feedback_now(1.0 / self.rate_hz)
             opening = mapping.follower_opening(trigger_angle)
             low, high = mapping.LEADER_GRIPPER_RANGE
             inside = low < trigger_angle < high
-            rate = OPENING_SLOPE * self.signs[-1] * present.velocity[-1] if inside else 0.0
+            rate = OPENING_SLOPE * self.gain * present.velocity[-1] if inside else 0.0
             trigger_torque = mapping.trigger_spring(opening, rate) + feedback
-            torques = np.r_[mapping.limit_torques(joints, self.signs), trigger_torque]
+            # toward released in the trigger's angle is the gain's sign on its motor
+            motor = float(np.sign(self.gain)) * trigger_torque
+            torques = np.r_[mapping.limit_torques(joints, self.signs), motor]
             self._bus.write_currents(mapping.currents(torques))
         cycle = _Cycle(time_ns, joints, mapping.trigger(trigger_angle), trigger_torque, feedback)
         with self._lock:

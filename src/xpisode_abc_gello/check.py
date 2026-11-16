@@ -1,7 +1,8 @@
 """Open the GELLO without a station and report what the device would publish.
 
     python -m xpisode_abc_gello.check --device /dev/serial/by-id/...FTBPFNFF... \\
-        --ids 10 11 12 13 14 15 16 --seconds 10 [--force-feedback]
+        --ids 10 11 12 13 14 15 16 --calibration tuned/gello_leader_l.json --seconds 10 \\
+        [--force-feedback]
 
 Without ``--force-feedback`` the motors stay unpowered. It prints the joints and the trigger
 twice a second, then the cycle rate, overruns and the read age the host would see.
@@ -22,6 +23,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--device", required=True)
     parser.add_argument("--ids", type=int, nargs=7, required=True)
+    parser.add_argument("--calibration", required=True, help="the file calibrate wrote")
     parser.add_argument("--seconds", type=float, default=10.0)
     parser.add_argument("--rate-hz", type=float, default=400.0)
     parser.add_argument("--baudrate", type=int, default=2_000_000)
@@ -31,6 +33,7 @@ def main() -> None:
     gello = GelloLeader(
         args.device,
         args.ids,
+        args.calibration,
         baudrate=args.baudrate,
         rate_hz=args.rate_hz,
         force_feedback=args.force_feedback,

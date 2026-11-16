@@ -8,29 +8,29 @@ The logic is abc's, ported (see `NOTICE`).
 
 ## Set up a GELLO
 
-1. Motor IDs: each arm its own ten, `arm * 10 + joint` (1L = 10–16, 1R = 20–26, 2L = 30–36,
-   2R = 40–46), at 2 000 000 baud, and Return Delay Time (address 9) 0. Set them one motor
-   at a time. The factory return delay, 500 µs a reply, holds the bus to about 190 Hz.
-   abc runs at 4 000 000; there, a longer lead to the base motor lost about 1% of its replies,
-   and none in 10 000 at 2 000 000. At 2M a sync read takes about 2 ms and the bus about
-   360 Hz; with short, stock leads 4M gives about 1 ms and 400 Hz (`baudrate` in the config).
-2. The U2D2's FTDI latency timer at 1 ms, and the port readable by the station's user:
-   `dialout`, and a udev rule `ATTR{latency_timer}="1"` for `ftdi_sio`. The device refuses
-   otherwise, as abc does.
-3. Check it without a station; the motors stay unpowered unless `--force-feedback`:
+Once per GELLO, after it is built (and again after a horn is taken off and put back):
 
-```bash
-python -m xpisode_abc_gello.check --device /dev/serial/by-id/usb-FTDI_..._FTBPFNFF-if00-port0 \
-    --ids 10 11 12 13 14 15 16
-```
+1. **IDs**, one motor at a time as it is wired (`python -m xpisode_abc_gello.ids`): each arm its
+   own ten, M0 (base) .. M6 (trigger), at 2 000 000 baud, Return Delay Time 0. abc runs at
+   4 000 000; there, a longer lead to the base motor lost about 1% of its replies, and none in
+   10 000 at 2 000 000. The factory return delay, 500 us a reply, holds the bus to about 190 Hz.
+2. **The port**: the U2D2's FTDI latency timer at 1 ms (a udev rule `ATTR{latency_timer}="1"`
+   for `ftdi_sio`) and the user in `dialout`. The device refuses otherwise, as abc does.
+3. **Calibration** (`python -m xpisode_abc_gello.calibrate`, motors unpowered): the zero pose,
+   then each joint turned about 45 degrees the way the YAM's joint turns positive, then the
+   trigger squeezed. It writes each joint's zero and direction and the trigger's ends to a file
+   the device reads, and refuses a step where another motor moved instead (IDs on the wrong
+   joints). abc instead assumes its own build's directions (its two profiles differ in joint 4)
+   and must be started in the zero pose each time; a joint the wrong way round reads mirrored, and
+   on the YAM's shoulder or elbow, which only turn one way from zero, it stays at its limit.
+4. Check it (`python -m xpisode_abc_gello.check --calibration FILE`): bus rate, retries, the joints.
 
 ## Opening it
 
-The zero is found again at every open, as abc does: each joint's offset is the whole number of
-45° steps that puts it nearest the calibration pose, **the YAM's zero with the trigger released**.
-So the GELLO must be in that pose when the device opens; a joint more than
-`calibration_tolerance_deg` (15) away refuses the open and says which. The offsets go into the
-Episode header (`offset_steps`), with how far each joint was from the pose.
+Any pose: the encoders are absolute within a turn, so each joint takes the turn that puts it
+nearest the middle of its range (all are well under a turn wide). The file must be this
+GELLO's: the device compares its U2D2 serial and servo IDs. The pose it opened in goes into
+the Episode header with the calibration's path and date.
 
 ## In a station
 
@@ -40,7 +40,7 @@ name = "leader_l"
 exclusive = ["serial:FTBPFNFF"]
 command = ["<venv>/bin/python", "-m", "xpisode_device.cli", "run", "--station", "{station}",
            "--name", "{name}", "--factory", "xpisode_abc_gello:GelloLeader", "--config",
-           '{"device": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBPFNFF-if00-port0", "servo_ids": [10, 11, 12, 13, 14, 15, 16]}']
+           '{"device": "/dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FTBPFNFF-if00-port0", "servo_ids": [10, 11, 12, 13, 14, 15, 16], "calibration": "tuned/gello_leader_l.json"}']
 ```
 
 Beside it, the leader's control group holds `leader_l/trigger_feedback` (not a joint target: the
@@ -80,10 +80,3 @@ the `trigger_feedback` torque a client last sent (0 to `max_feedback_torque`, 0.
 zero `feedback_timeout_s` after the last one, or when halted, at no more than `feedback_slew`).
 `read` returns the newest cycle, stamped when its reply arrived; `poll_hz` (200) is how often the
 host records it. `diagnostics` counts cycles, overruns, retries and the slowest cycle.
-
-## Tools
-
-`tools/` holds the bench scripts used while building a GELLO, run with any Python that has
-`dynamixel-sdk`: `gello_ids.py` sets one new motor's ID, baud rate and return delay (one
-factory motor on the bus at a time), `gello_monitor.py` shows every motor's angle live (to check
-which ID is which joint), `gello_jointcheck.py` records which ID moves as each joint is turned.
