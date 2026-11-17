@@ -1049,9 +1049,9 @@ dev = [
 requires-dist = [
     { name = "dynamixel-sdk", specifier = ">=3.7" },
     { name = "numpy", specifier = ">=1.24" },
-    { name = "xpisode-device", extras = ["iox"], git = "ssh://git@github.com/ningma-dev/xpisode.git?subdirectory=packages%2Fxpisode-device&rev=01d6d596408702c1feea81860ca3432d3263adc2" },
-    { name = "xpisode-env", git = "ssh://git@github.com/ningma-dev/xpisode.git?subdirectory=packages%2Fxpisode-env&rev=01d6d596408702c1feea81860ca3432d3263adc2" },
-    { name = "xpisode-format", git = "ssh://git@github.com/ningma-dev/xpisode.git?subdirectory=packages%2Fxpisode-format&rev=01d6d596408702c1feea81860ca3432d3263adc2" },
+    { name = "xpisode-device", extras = ["iox"], git = "ssh://git@github.com/ningma-dev/xpisode.git?subdirectory=packages%2Fxpisode-device&rev=537e03364a9415ebd809d3406f29c1c6ab3974b3" },
+    { name = "xpisode-env", git = "ssh://git@github.com/ningma-dev/xpisode.git?subdirectory=packages%2Fxpisode-env&rev=537e03364a9415ebd809d3406f29c1c6ab3974b3" },
+    { name = "xpisode-format", git = "ssh://git@github.com/ningma-dev/xpisode.git?subdirectory=packages%2Fxpisode-format&rev=537e03364a9415ebd809d3406f29c1c6ab3974b3" },
 ]
 
 [package.metadata.requires-dev]
@@ -1060,7 +1060,7 @@ dev = [{ name = "pytest", specifier = ">=8.3" }]
 [[package]]
 name = "xpisode-device"
 version = "0.1.0"
-source = { git = "ssh://git@github.com/ningma-dev/xpisode.git?subdirectory=packages%2Fxpisode-device&rev=01d6d596408702c1feea81860ca3432d3263adc2#01d6d596408702c1feea81860ca3432d3263adc2" }
+source = { git = "ssh://git@github.com/ningma-dev/xpisode.git?subdirectory=packages%2Fxpisode-device&rev=537e03364a9415ebd809d3406f29c1c6ab3974b3#537e03364a9415ebd809d3406f29c1c6ab3974b3" }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
@@ -1077,7 +1077,7 @@ iox = [
 [[package]]
 name = "xpisode-env"
 version = "0.1.0"
-source = { git = "ssh://git@github.com/ningma-dev/xpisode.git?subdirectory=packages%2Fxpisode-env&rev=01d6d596408702c1feea81860ca3432d3263adc2#01d6d596408702c1feea81860ca3432d3263adc2" }
+source = { git = "ssh://git@github.com/ningma-dev/xpisode.git?subdirectory=packages%2Fxpisode-env&rev=537e03364a9415ebd809d3406f29c1c6ab3974b3#537e03364a9415ebd809d3406f29c1c6ab3974b3" }
 dependencies = [
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
@@ -1091,7 +1091,7 @@ dependencies = [
 [[package]]
 name = "xpisode-format"
 version = "0.1.0"
-source = { git = "ssh://git@github.com/ningma-dev/xpisode.git?subdirectory=packages%2Fxpisode-format&rev=01d6d596408702c1feea81860ca3432d3263adc2#01d6d596408702c1feea81860ca3432d3263adc2" }
+source = { git = "ssh://git@github.com/ningma-dev/xpisode.git?subdirectory=packages%2Fxpisode-format&rev=537e03364a9415ebd809d3406f29c1c6ab3974b3#537e03364a9415ebd809d3406f29c1c6ab3974b3" }
 dependencies = [
     { name = "av", version = "16.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "av", version = "19.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
