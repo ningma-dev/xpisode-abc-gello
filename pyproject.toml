@@ -33,6 +33,6 @@ target-version = "py310"
 
 # The framework commit xpisode-site pins; a station's pins take precedence over these.
 [tool.uv.sources]
-xpisode-device = { git = "ssh://git@github.com/ningma-dev/xpisode.git", rev = "0a6cd5926253e7c43a9204cbc73b32eed8d7e22e", subdirectory = "packages/xpisode-device" }
-xpisode-format = { git = "ssh://git@github.com/ningma-dev/xpisode.git", rev = "0a6cd5926253e7c43a9204cbc73b32eed8d7e22e", subdirectory = "packages/xpisode-format" }
-xpisode-env = { git = "ssh://git@github.com/ningma-dev/xpisode.git", rev = "0a6cd5926253e7c43a9204cbc73b32eed8d7e22e", subdirectory = "packages/xpisode-env" }
+xpisode-device = { git = "ssh://git@github.com/ningma-dev/xpisode.git", rev = "e29c6949cf83aa6bd101a4cd6f23f1494129a7b3", subdirectory = "packages/xpisode-device" }
+xpisode-format = { git = "ssh://git@github.com/ningma-dev/xpisode.git", rev = "e29c6949cf83aa6bd101a4cd6f23f1494129a7b3", subdirectory = "packages/xpisode-format" }
+xpisode-env = { git = "ssh://git@github.com/ningma-dev/xpisode.git", rev = "e29c6949cf83aa6bd101a4cd6f23f1494129a7b3", subdirectory = "packages/xpisode-env" }
